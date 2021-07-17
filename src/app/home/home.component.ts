@@ -1,30 +1,54 @@
-import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 
-import { AuthService } from '../auth.service';
+import { interval, Subscription, Observable } from 'rxjs';
+import { map, filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css']
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
+  private firstObsSubscription: Subscription = new Subscription;
 
-  constructor(private router: Router, private authService: AuthService) { }
+  constructor() {
+  }
 
   ngOnInit() {
+    // this.firstObsSubscription = interval(1000).subscribe(count => {
+    //   console.log(count);
+    // });
+    const customIntervalObservable = Observable.create((observer: { next: (arg0: number) => void; complete: () => void; error: (arg0: Error) => void; }) => {
+      let count = 0;
+      setInterval(() => {
+        observer.next(count);
+        if (count === 5) {
+          observer.complete();
+        }
+        if (count > 3) {
+          observer.error(new Error('Count is greater 3!'));
+        }
+        count++;
+      }, 1000);
+    });
+
+
+    this.firstObsSubscription = customIntervalObservable.pipe(filter((data:any) => {
+      return data > 0;
+    }), map((data: number) => {
+      return 'Round: ' + (data + 1);
+    })).subscribe((data: any) => {
+      console.log(data);
+    }, (error: { message: any; }) => {
+      console.log(error);
+      alert(error.message);
+    }, () => {
+      console.log('Completed!');
+    });
   }
 
-  onLoadServer(id: number) {
-    // complex calculation
-    this.router.navigate(['/servers', id, 'edit'], {queryParams: {allowEdit: '1'}, fragment: 'loading'});
+  ngOnDestroy(): void {
+    this.firstObsSubscription.unsubscribe();
   }
 
-  onLogin() {
-    this.authService.login();
-  }
-
-  onLogout() {
-    this.authService.logout();
-  }
 }
